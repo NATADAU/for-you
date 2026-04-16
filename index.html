@@ -24,7 +24,7 @@
       position: fixed;
       inset: 0;
       pointer-events: none;
-      z-index: 0;
+      z-index: 5;
     }
 
     .glow {
@@ -44,7 +44,6 @@
       50%       { transform: translate(20px, -25px); }
     }
 
-    /* Кнопка музыки */
     .music-btn {
       position: fixed;
       top: 1.1rem; right: 1.1rem;
@@ -59,7 +58,6 @@
       transition: transform 0.2s;
       z-index: 100;
       display: flex; align-items: center; justify-content: center;
-      -webkit-tap-highlight-color: transparent;
     }
     .music-btn.playing { 
         background: rgba(247,200,160,0.85); 
@@ -79,7 +77,6 @@
       text-align: center;
     }
 
-    /* Круг с персонажем */
     .avatar-ring {
       width: 120px;
       height: 120px;
@@ -137,7 +134,9 @@
       font-size: 1rem;
       cursor: pointer;
       box-shadow: 0 4px 20px rgba(245,180,150,0.35);
+      transition: transform 0.2s;
     }
+    .btn:active { transform: scale(0.95); }
   </style>
 </head>
 <body>
@@ -145,7 +144,7 @@
 <canvas id="confetti"></canvas>
 
 <div class="glow glow-1"></div>
-<div class="glow glow-2"></div>
+<div class="glow glow-2)</div>
 <div class="glow glow-3"></div>
 
 <button class="music-btn" id="musicBtn" onclick="toggleMusic()">♪</button>
@@ -155,9 +154,7 @@
 </audio>
 
 <div class="wrap">
-  <div class="avatar-ring" id="avatarRing">
-    <!-- Слайды создаются через JS -->
-  </div>
+  <div class="avatar-ring" id="avatarRing"></div>
   
   <h1>Сейчас трудно.<br>Это правда.</h1>
 
@@ -165,48 +162,12 @@
     <p id="phrase">Ты справляешься лучше, чем тебе кажется.</p>
   </div>
 
-  <button class="btn" onclick="nextPhrase()">эти слова волшебные</button>
+  <button class="btn" onclick="nextAction()">волшебная кнопка</button>
 </div>
 
 <script>
-/* Список твоих загруженных картинок */
-const images = [
-  'moomin1.png',
-  'moomin2.png',
-  'moomin3.png',
-  'moomin4.png',
-  'moomin5.png',
-  'moomin6.png',
-  'moomin7.png'
-];
-
-const ring = document.getElementById('avatarRing');
-let avatarIdx = 0;
-
-// Создаем элементы для картинок
-images.forEach((src, i) => {
-  const slide = document.createElement('div');
-  slide.className = 'avatar-slide' + (i === 0 ? ' active' : '');
-  const img = document.createElement('img');
-  img.src = src;
-  img.alt = "Moomin Character";
-  // Если картинка не загрузится, покажем цветной круг
-  img.onerror = () => {
-      slide.style.background = '#f7c9a8';
-      img.style.display = 'none';
-  };
-  slide.appendChild(img);
-  ring.appendChild(slide);
-});
-
-function rotateAvatars() {
-  const slides = document.querySelectorAll('.avatar-slide');
-  slides[avatarIdx].classList.remove('active');
-  avatarIdx = (avatarIdx + 1) % slides.length;
-  slides[avatarIdx].classList.add('active');
-}
-setInterval(rotateAvatars, 3000);
-
+// Список имен ваших загруженных файлов
+const imageNames = ['moomin1.png', 'moomin2.png', 'moomin3.png', 'moomin4.png', 'moomin5.png', 'moomin6.png', 'moomin7.png'];
 const phrases = [
   "Ты справляешься лучше, чем тебе кажется.",
   "Можно просто дышать. Этого уже достаточно.",
@@ -216,13 +177,85 @@ const phrases = [
   "Маленький шаг вперёд — это всё равно шаг.",
   "Кто-то думает о тебе тепло прямо в эту минуту."
 ];
+
+const ring = document.getElementById('avatarRing');
+let avatarIdx = 0;
 let pIdx = 0;
 
-function nextPhrase() {
+// Функция для формирования корректного пути к загруженному файлу
+function getFilePath(fileName) {
+  // В среде Canvas загруженные файлы доступны в этой папке
+  return `./${fileName}`;
+}
+
+function initAvatars() {
+  ring.innerHTML = '';
+  imageNames.forEach((name, i) => {
+    const slide = document.createElement('div');
+    slide.className = 'avatar-slide' + (i === 0 ? ' active' : '');
+    const img = document.createElement('img');
+    
+    // Используем путь к файлу
+    img.src = getFilePath(name);
+    
+    img.onerror = () => { 
+      console.log('Ошибка загрузки:', name);
+      slide.style.background = '#f7c9a8'; 
+      img.style.display = 'none'; 
+      slide.innerHTML = `<span style="font-size:2rem">✨</span>`;
+    };
+    slide.appendChild(img);
+    ring.appendChild(slide);
+  });
+}
+
+initAvatars();
+
+function rotateAvatars() {
+  const slides = document.querySelectorAll('.avatar-slide');
+  if (slides.length === 0) return;
+  slides[avatarIdx].classList.remove('active');
+  avatarIdx = (avatarIdx + 1) % slides.length;
+  slides[avatarIdx].classList.add('active');
+}
+
+function nextAction() {
   pIdx = (pIdx + 1) % phrases.length;
   document.getElementById('phrase').textContent = phrases[pIdx];
   rotateAvatars();
+  spawnBurst();
 }
+
+/* Конфетти */
+const canvas = document.getElementById('confetti');
+const ctx = canvas.getContext('2d');
+let particles = [];
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+window.onresize = resize; resize();
+
+function spawnBurst() {
+  for(let i=0; i<30; i++) {
+    particles.push({
+      x: canvas.width/2, y: canvas.height/2,
+      vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
+      size: Math.random()*5+2, color: ['#f5cba7','#f7b8c8','#c8dff7'][Math.floor(Math.random()*3)],
+      life: 1
+    });
+  }
+}
+
+function update() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  particles.forEach((p, i) => {
+    p.x += p.vx; p.y += p.vy; p.life -= 0.02;
+    if(p.life <= 0) particles.splice(i, 1);
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = p.life;
+    ctx.fillRect(p.x, p.y, p.size, p.size);
+  });
+  requestAnimationFrame(update);
+}
+update();
 
 /* Музыка */
 const music = document.getElementById('bgMusic');
