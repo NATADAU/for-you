@@ -28,6 +28,7 @@
     #balloons { z-index: 1; }
     #confetti { z-index: 15; }
 
+    /* Мягкое свечение на фоне */
     .glow {
       position: fixed;
       border-radius: 50%;
@@ -38,7 +39,6 @@
     }
     .glow-1 { width: 500px; height: 500px; background: #f7c9a8; top: -150px; left: -150px; animation: drift 14s ease-in-out infinite; }
     .glow-2 { width: 400px; height: 400px; background: #c8dff7; bottom: -100px; right: -100px; animation: drift 18s ease-in-out infinite reverse; }
-    .glow-3 { width: 300px; height: 300px; background: #f7c8d4; top: 40%; left: 30%; animation: drift 20s ease-in-out infinite 4s; }
 
     @keyframes drift {
       0%, 100% { transform: translate(0, 0); }
@@ -78,6 +78,7 @@
       text-align: center;
     }
 
+    /* Контейнер для аватара - теперь он абсолютно пустой по умолчанию */
     .avatar-ring {
       width: 120px;
       height: 120px;
@@ -85,8 +86,13 @@
       margin: 0 auto 1.6rem;
       position: relative;
       overflow: hidden;
+      background: transparent;
+    }
+    
+    /* Тень и фон добавляются только когда картинка реально загружена */
+    .avatar-ring.active-image {
       box-shadow: 0 6px 28px rgba(0,0,0,0.14);
-      background: transparent; /* Убрали белый фон, чтобы не было "кружочка" без картинки */
+      background: #fff;
     }
 
     .avatar-slide {
@@ -97,10 +103,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 50%;
-      overflow: hidden;
     }
-    .avatar-slide.active { opacity: 1; }
+    .avatar-slide.visible { opacity: 1; }
 
     .avatar-slide img {
       width: 100%;
@@ -157,7 +161,6 @@
 
 <div class="glow glow-1"></div>
 <div class="glow glow-2"></div>
-<div class="glow glow-3"></div>
 
 <button class="music-btn" id="musicBtn" onclick="toggleMusic()">♪</button>
 
@@ -166,6 +169,7 @@
 </audio>
 
 <div class="wrap">
+  <!-- Здесь ничего не будет рисоваться, пока картинки не загрузятся -->
   <div class="avatar-ring" id="avatarRing"></div>
   
   <h1>Сейчас трудно.<br>Это правда.</h1>
@@ -190,33 +194,49 @@ const phrases = [
 ];
 
 const ring = document.getElementById('avatarRing');
-let avatarIdx = 0;
+let validSlides = [];
+let currentIdx = 0;
 let pIdx = 0;
 
-function initAvatars() {
-  ring.innerHTML = '';
-  imageNames.forEach((name, i) => {
-    const slide = document.createElement('div');
-    slide.className = 'avatar-slide' + (i === 0 ? ' active' : '');
-    const img = document.createElement('img');
-    img.src = `./${name}`;
-    img.onerror = () => { 
-      // Если картинка не найдена, просто скрываем этот слайд, чтобы не было пустых кружков
-      img.style.display = 'none'; 
-    };
-    slide.appendChild(img);
-    ring.appendChild(slide);
-  });
+// Новая логика: загружаем только то, что работает
+async function loadAvatars() {
+  for (const name of imageNames) {
+    try {
+      const img = new Image();
+      img.src = `./${name}`;
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+      
+      // Если загрузилась, создаем слайд
+      const slide = document.createElement('div');
+      slide.className = 'avatar-slide';
+      const displayImg = document.createElement('img');
+      displayImg.src = img.src;
+      slide.appendChild(displayImg);
+      ring.appendChild(slide);
+      validSlides.push(slide);
+      
+      // Показываем первую картинку сразу
+      if (validSlides.length === 1) {
+        slide.classList.add('visible');
+        ring.classList.add('active-image');
+      }
+    } catch (e) {
+      // Игнорируем ошибки, ничего не создаем
+    }
+  }
 }
 
-initAvatars();
+loadAvatars();
 
 function rotateAvatars() {
-  const slides = document.querySelectorAll('.avatar-slide');
-  if (!slides.length) return;
-  slides[avatarIdx].classList.remove('active');
-  avatarIdx = (avatarIdx + 1) % slides.length;
-  slides[avatarIdx].classList.add('active');
+  if (validSlides.length < 2) return;
+  
+  validSlides[currentIdx].classList.remove('visible');
+  currentIdx = (currentIdx + 1) % validSlides.length;
+  validSlides[currentIdx].classList.add('visible');
 }
 
 function nextAction() {
@@ -274,83 +294,53 @@ function drawBalloon(b) {
   const x = b.x + dx;
   const y = b.y;
   const r = b.r;
-
   const fadeIn = Math.min(1, (bCanvas.height - y + 120) / 80);
   const fadeOut = Math.min(1, (y + 60) / 60);
   bCtx.globalAlpha = Math.max(0, Math.min(fadeIn, fadeOut) * 0.8);
-
   bCtx.beginPath();
   bCtx.ellipse(x, y, r * 0.72, r, 0, 0, Math.PI * 2);
   bCtx.fillStyle = b.color;
   bCtx.fill();
-
   bCtx.beginPath();
   bCtx.ellipse(x - r * 0.22, y - r * 0.28, r * 0.22, r * 0.16, -0.4, 0, Math.PI * 2);
   bCtx.fillStyle = 'rgba(255,255,255,0.5)';
   bCtx.fill();
-
   bCtx.beginPath();
   bCtx.ellipse(x, y + r + 3, r * 0.1, r * 0.08, 0, 0, Math.PI * 2);
   bCtx.fillStyle = b.color;
   bCtx.fill();
-
-  const kx = x;
-  const ky = y + r + 6;
-  const cp1 = { x: kx + Math.sin(b.phase + 1) * 12, y: ky + r * 0.9 };
-  const cp2 = { x: kx - Math.sin(b.phase + 2) * 12, y: ky + r * 1.8 };
-  const ex = kx + Math.sin(b.phase) * 8;
-  const ey = ky + r * 2.6;
-  
-  bCtx.beginPath();
-  bCtx.moveTo(kx, ky);
-  bCtx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, ex, ey);
-  bCtx.strokeStyle = 'rgba(140,100,80,0.3)';
-  bCtx.lineWidth = 1;
-  bCtx.stroke();
 }
 
 function animate() {
   cCtx.clearRect(0,0,cCanvas.width,cCanvas.height);
   bCtx.clearRect(0,0,bCanvas.width,bCanvas.height);
-
   cParticles.forEach((p, i) => {
     p.x += p.vx; p.y += p.vy; p.life -= 0.015;
     if(p.life <= 0) cParticles.splice(i, 1);
-    cCtx.fillStyle = p.color;
-    cCtx.globalAlpha = p.life;
+    cCtx.fillStyle = p.color; cCtx.globalAlpha = p.life;
     cCtx.fillRect(p.x, p.y, p.size, p.size);
   });
-
   if(Math.random() < 0.025) spawnBalloon();
   balloonList.forEach((b, i) => {
-    b.y -= b.vy;
-    b.t++;
+    b.y -= b.vy; b.t++;
     if(b.y < -300) balloonList.splice(i, 1);
     drawBalloon(b);
   });
-
   requestAnimationFrame(animate);
 }
-
 animate();
 
-/* Музыка */
-const music = document.getElementById('bgMusic');
-const mBtn = document.getElementById('musicBtn');
-
 function toggleMusic() {
+  const music = document.getElementById('bgMusic');
+  const mBtn = document.getElementById('musicBtn');
   if (music.paused) {
     music.play().then(() => {
-        mBtn.textContent = '♫';
-        mBtn.classList.add('playing');
-    }).catch(e => console.log("Ошибка звука:", e));
+        mBtn.textContent = '♫'; mBtn.classList.add('playing');
+    }).catch(e => console.log(e));
   } else {
-    music.pause();
-    mBtn.textContent = '♪';
-    mBtn.classList.remove('playing');
+    music.pause(); mBtn.textContent = '♪'; mBtn.classList.remove('playing');
   }
 }
 </script>
-
 </body>
 </html>
