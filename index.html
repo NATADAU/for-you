@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<html<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
@@ -81,385 +80,6 @@
       text-align: center;
     }
 
-    /* Контейнер аватара - полностью прозрачен, пока нет картинок */
-    .avatar-ring {
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      margin: 0 auto 1.6rem;
-      position: relative;
-      overflow: hidden;
-      background: transparent;
-      transition: background 0.5s, box-shadow 0.5s;
-    }
-    
-    .avatar-ring.active-image {
-      box-shadow: 0 6px 28px rgba(0,0,0,0.14);
-      background: #fff;
-    }
-
-    .avatar-slide {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      transition: opacity 0.8s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .avatar-slide.visible { opacity: 1; }
-
-    .avatar-slide img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transform: scale(1.1);
-    }
-
-    h1 {
-      font-size: 2.2rem;
-      color: #5a4a42;
-      margin-bottom: 0.8rem;
-    }
-
-    .phrase-card {
-      background: rgba(255,255,255,0.75);
-      backdrop-filter: blur(12px);
-      border-radius: 24px;
-      padding: 2.4rem 2rem;
-      margin-bottom: 2rem;
-      box-shadow: 0 4px 40px rgba(180,140,120,0.12);
-      min-height: 180px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    #phrase {
-      font-size: 1.6rem;
-      line-height: 1.6;
-      color: #5a4a42;
-      font-style: italic;
-    }
-
-    .btn {
-      padding: 1rem 2.5rem;
-      border-radius: 999px;
-      border: none;
-      background: linear-gradient(135deg, #f5cba7, #f7b8c8);
-      color: #5a3a30;
-      font-family: 'Georgia', serif;
-      font-size: 1.1rem;
-      cursor: pointer;
-      box-shadow: 0 4px 20px rgba(245,180,150,0.35);
-      transition: transform 0.2s;
-    }
-    .btn:active { transform: scale(0.95); }
-  </style>
-</head>
-<body>
-
-<canvas id="balloons"></canvas>
-<canvas id="confetti"></canvas>
-
-<div class="glow glow-1"></div>
-<div class="glow glow-2"></div>
-
-<button class="music-btn" id="musicBtn" onclick="toggleMusic()">♪</button>
-
-<audio id="bgMusic" loop>
-  <source src="mixkit-sleepy-cat-135.mp3" type="audio/mpeg">
-</audio>
-
-<div class="wrap">
-  <div class="avatar-ring" id="avatarRing"></div>
-  
-  <h1>Сейчас трудно.<br>Это правда.</h1>
-
-  <div class="phrase-card" id="card">
-    <p id="phrase">Ты справляешься лучше, чем тебе кажется.</p>
-  </div>
-
-  <button class="btn" onclick="nextAction()">Прикоснись здесь</button>
-</div>
-
-<script>
-const imageNames = ['moomin1.png', 'moomin2.png', 'moomin3.png', 'moomin4.png', 'moomin5.png', 'moomin6.png', 'moomin7.png'];
-const phrases = [
-  "Ты справляешься лучше, чем тебе кажется.",
-  "Можно просто дышать. Этого уже достаточно.",
-  "Твои чувства настоящие — и ты имеешь право их чувствовать.",
-  "Ты не одна, даже если сейчас так ощущается.",
-  "После самой тёмной ночи всё равно приходит утро.",
-  "Маленький шаг вперёд — это всё равно шаг.",
-  "Кто-то думает о тебе тепло прямо в эту минуту."
-];
-
-const ring = document.getElementById('avatarRing');
-let validSlides = [];
-let currentIdx = 0;
-let pIdx = 0;
-
-// Загрузка аватаров с проверкой успеха
-async function loadAvatars() {
-  for (const name of imageNames) {
-    try {
-      const img = new Image();
-      img.src = `./${name}`;
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-      });
-      
-      const slide = document.createElement('div');
-      slide.className = 'avatar-slide';
-      const displayImg = document.createElement('img');
-      displayImg.src = img.src;
-      slide.appendChild(displayImg);
-      ring.appendChild(slide);
-      validSlides.push(slide);
-      
-      if (validSlides.length === 1) {
-        slide.classList.add('visible');
-        ring.classList.add('active-image');
-      }
-    } catch (e) {}
-  }
-}
-
-loadAvatars();
-
-function rotateAvatars() {
-  if (validSlides.length < 2) return;
-  validSlides[currentIdx].classList.remove('visible');
-  currentIdx = (currentIdx + 1) % validSlides.length;
-  validSlides[currentIdx].classList.add('visible');
-}
-
-function nextAction() {
-  pIdx = (pIdx + 1) % phrases.length;
-  document.getElementById('phrase').textContent = phrases[pIdx];
-  rotateAvatars();
-  spawnBurst();
-}
-
-/* --- КОНФЕТТИ --- */
-const cCanvas = document.getElementById('confetti');
-const cCtx = cCanvas.getContext('2d');
-let cParticles = [];
-
-function spawnBurst() {
-  for(let i=0; i<35; i++) {
-    cParticles.push({
-      x: cCanvas.width/2, y: cCanvas.height/2,
-      vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
-      size: Math.random()*5+2, color: ['#f5cba7','#f7b8c8','#c8dff7'][Math.floor(Math.random()*3)],
-      life: 1
-    });
-  }
-}
-
-/* --- ШАРИКИ --- */
-const bCanvas = document.getElementById('balloons');
-const bCtx = bCanvas.getContext('2d');
-let balloonList = [];
-const bPalette = ['#f7b8c8','#f5cba7','#c8dff7','#d4f7c8','#e8c8f7','#ffd6e0'];
-
-function resize() { 
-  cCanvas.width = window.innerWidth; cCanvas.height = window.innerHeight; 
-  bCanvas.width = window.innerWidth; bCanvas.height = window.innerHeight;
-}
-window.onresize = resize;
-resize();
-
-function spawnBalloon() {
-  balloonList.push({
-    x: 50 + Math.random() * (bCanvas.width - 100),
-    y: bCanvas.height + 150,
-    vy: 0.8 + Math.random() * 0.7,
-    r: 45 + Math.random() * 35,
-    color: bPalette[Math.floor(Math.random() * bPalette.length)],
-    phase: Math.random() * Math.PI * 2,
-    swayA: 20 + Math.random() * 25,
-    swayS: 0.01 + Math.random() * 0.015,
-    t: 0
-  });
-}
-
-function drawBalloon(b) {
-  const dx = Math.sin(b.phase + b.t * b.swayS) * b.swayA;
-  const x = b.x + dx;
-  const y = b.y;
-  const r = b.r;
-
-  // Плавное появление и исчезновение
-  const distFromBottom = bCanvas.height - y;
-  const fadeIn = Math.min(1, distFromBottom / 120);
-  const fadeOut = Math.min(1, (y + 200) / 200);
-  const alpha = Math.max(0, Math.min(fadeIn, fadeOut));
-  
-  bCtx.globalAlpha = alpha * 0.8;
-
-  // Ниточка (отрисовываем ПЕРЕД шариком)
-  const kx = x;
-  const ky = y + r;
-  bCtx.beginPath();
-  bCtx.moveTo(kx, ky);
-  
-  const stringLength = 150;
-  const wave = Math.sin(b.t * 0.04) * 10;
-  bCtx.bezierCurveTo(
-    kx + wave, ky + stringLength * 0.3, 
-    kx - wave, ky + stringLength * 0.6, 
-    kx, ky + stringLength
-  );
-  
-  bCtx.strokeStyle = 'rgba(100, 80, 70, 0.4)'; 
-  bCtx.lineWidth = 1.2;
-  bCtx.stroke();
-
-  // Узелок
-  bCtx.beginPath();
-  bCtx.moveTo(x, y + r - 2);
-  bCtx.lineTo(x - 7, y + r + 10);
-  bCtx.lineTo(x + 7, y + r + 10);
-  bCtx.closePath();
-  bCtx.fillStyle = b.color;
-  bCtx.fill();
-
-  // Тело шарика
-  bCtx.beginPath();
-  bCtx.ellipse(x, y, r * 0.8, r, 0, 0, Math.PI * 2);
-  bCtx.fillStyle = b.color;
-  bCtx.fill();
-
-  // Блик
-  bCtx.beginPath();
-  bCtx.ellipse(x - r*0.3, y - r*0.4, r*0.2, r*0.15, -0.5, 0, Math.PI * 2);
-  bCtx.fillStyle = 'rgba(255,255,255,0.45)';
-  bCtx.fill();
-
-  // Сбрасываем альфу для корректности следующих отрисовок
-  bCtx.globalAlpha = 1.0;
-}
-
-function animate() {
-  cCtx.clearRect(0,0,cCanvas.width,cCanvas.height);
-  bCtx.clearRect(0,0,bCanvas.width,bCanvas.height);
-
-  cParticles.forEach((p, i) => {
-    p.x += p.vx; p.y += p.vy; p.life -= 0.015;
-    if(p.life <= 0) cParticles.splice(i, 1);
-    cCtx.fillStyle = p.color; cCtx.globalAlpha = p.life;
-    cCtx.fillRect(p.x, p.y, p.size, p.size);
-  });
-
-  if(Math.random() < 0.03) spawnBalloon();
-  balloonList.forEach((b, i) => {
-    b.y -= b.vy; b.t++;
-    if(b.y < -400) balloonList.splice(i, 1);
-    drawBalloon(b);
-  });
-
-  requestAnimationFrame(animate);
-}
-animate();
-
-function toggleMusic() {
-  const music = document.getElementById('bgMusic');
-  const mBtn = document.getElementById('musicBtn');
-  if (music.paused) {
-    music.play().then(() => {
-      mBtn.textContent = '♫'; mBtn.classList.add('playing');
-    }).catch(() => {});
-  } else {
-    music.pause(); mBtn.textContent = '♪'; mBtn.classList.remove('playing');
-  }
-}
-</script>
-</body>
-</html> lang="ru">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ты не одна</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: 'Georgia', serif;
-      min-height: 100vh;
-      background: #fdf6f0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem;
-      overflow: hidden;
-      position: relative;
-    }
-
-    /* Холсты для анимации */
-    canvas {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-    }
-    #balloons { z-index: 1; }
-    #confetti { z-index: 15; }
-
-    /* Фоновое свечение */
-    .glow {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(90px);
-      opacity: 0.22;
-      pointer-events: none;
-      z-index: 0;
-    }
-    .glow-1 { width: 500px; height: 500px; background: #f7c9a8; top: -150px; left: -150px; animation: drift 14s ease-in-out infinite; }
-    .glow-2 { width: 400px; height: 400px; background: #c8dff7; bottom: -100px; right: -100px; animation: drift 18s ease-in-out infinite reverse; }
-
-    @keyframes drift {
-      0%, 100% { transform: translate(0, 0); }
-      50%       { transform: translate(20px, -25px); }
-    }
-
-    /* Кнопка музыки */
-    .music-btn {
-      position: fixed;
-      top: 1.1rem; right: 1.1rem;
-      width: 46px; height: 46px;
-      border-radius: 50%;
-      border: none;
-      background: rgba(255,255,255,0.75);
-      backdrop-filter: blur(8px);
-      font-size: 1.3rem;
-      cursor: pointer;
-      box-shadow: 0 2px 14px rgba(0,0,0,0.1);
-      transition: transform 0.2s;
-      z-index: 100;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .music-btn.playing { 
-      background: rgba(247,200,160,0.85); 
-      animation: rotate 4s linear infinite;
-    }
-    
-    @keyframes rotate {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-
-    .wrap {
-      position: relative;
-      z-index: 10;
-      max-width: 480px;
-      width: 100%;
-      text-align: center;
-    }
-
-    /* Контейнер аватара - полностью прозрачен, пока нет картинок */
     .avatar-ring {
       width: 120px;
       height: 120px;
@@ -578,7 +198,6 @@ let validSlides = [];
 let currentIdx = 0;
 let pIdx = 0;
 
-// Загрузка аватаров с проверкой успеха
 async function loadAvatars() {
   for (const name of imageNames) {
     try {
@@ -588,7 +207,6 @@ async function loadAvatars() {
         img.onload = resolve;
         img.onerror = reject;
       });
-      
       const slide = document.createElement('div');
       slide.className = 'avatar-slide';
       const displayImg = document.createElement('img');
@@ -596,14 +214,11 @@ async function loadAvatars() {
       slide.appendChild(displayImg);
       ring.appendChild(slide);
       validSlides.push(slide);
-      
       if (validSlides.length === 1) {
         slide.classList.add('visible');
         ring.classList.add('active-image');
       }
-    } catch (e) {
-      // Изображение не найдено, просто пропускаем
-    }
+    } catch (e) {}
   }
 }
 
@@ -672,39 +287,39 @@ function drawBalloon(b) {
   const y = b.y;
   const r = b.r;
 
-  // Плавное появление (Fade In)
   const distFromBottom = bCanvas.height - y;
   const fadeIn = Math.min(1, distFromBottom / 120);
   const fadeOut = Math.min(1, (y + 200) / 200);
   const alpha = Math.max(0, Math.min(fadeIn, fadeOut));
   
-  bCtx.globalAlpha = alpha * 0.75;
+  bCtx.globalAlpha = alpha * 0.8;
 
-  // Ниточка (от узелка вниз)
+  // Ниточка
   const kx = x;
-  const ky = y + r + 5;
+  const ky = y + r;
   bCtx.beginPath();
   bCtx.moveTo(kx, ky);
-  // Извилистая ниточка через кривую Безье
+  const stringLength = 150;
+  const wave = Math.sin(b.t * 0.04) * 10;
   bCtx.bezierCurveTo(
-    kx + Math.sin(b.t * 0.05) * 15, ky + 40, 
-    kx - Math.sin(b.t * 0.05) * 15, ky + 80, 
-    kx, ky + 140
+    kx + wave, ky + stringLength * 0.3, 
+    kx - wave, ky + stringLength * 0.6, 
+    kx, ky + stringLength
   );
-  bCtx.strokeStyle = 'rgba(120, 90, 70, 0.3)';
-  bCtx.lineWidth = 1.5;
+  bCtx.strokeStyle = 'rgba(100, 80, 70, 0.4)'; 
+  bCtx.lineWidth = 1.2;
   bCtx.stroke();
 
   // Узелок
   bCtx.beginPath();
-  bCtx.moveTo(x, y + r);
-  bCtx.lineTo(x - 6, y + r + 8);
-  bCtx.lineTo(x + 6, y + r + 8);
+  bCtx.moveTo(x, y + r - 2);
+  bCtx.lineTo(x - 7, y + r + 10);
+  bCtx.lineTo(x + 7, y + r + 10);
   bCtx.closePath();
   bCtx.fillStyle = b.color;
   bCtx.fill();
 
-  // Тело шарика
+  // Шарик
   bCtx.beginPath();
   bCtx.ellipse(x, y, r * 0.8, r, 0, 0, Math.PI * 2);
   bCtx.fillStyle = b.color;
@@ -713,7 +328,7 @@ function drawBalloon(b) {
   // Блик
   bCtx.beginPath();
   bCtx.ellipse(x - r*0.3, y - r*0.4, r*0.2, r*0.15, -0.5, 0, Math.PI * 2);
-  bCtx.fillStyle = 'rgba(255,255,255,0.4)';
+  bCtx.fillStyle = 'rgba(255,255,255,0.45)';
   bCtx.fill();
 
   bCtx.globalAlpha = 1.0;
